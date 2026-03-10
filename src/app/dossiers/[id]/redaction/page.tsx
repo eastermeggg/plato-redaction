@@ -9,7 +9,6 @@ import {
   FileText,
   Loader2,
   Download,
-  ChevronRight,
   ThumbsUp,
   ThumbsDown,
   Send,
@@ -17,8 +16,6 @@ import {
   Circle,
   CheckCircle2,
   Upload,
-  Eye,
-  Trash2,
   X,
 } from "lucide-react";
 import { getDossier, getAllTemplates } from "@/data/mock";
@@ -94,7 +91,6 @@ export default function RedactionPage() {
   const [steps, setSteps] = useState<GenerationStep[]>(INITIAL_STEPS);
   const [thumbs, setThumbs] = useState<"up" | "down" | null>(null);
   const [feedback, setFeedback] = useState("");
-  const [showParams, setShowParams] = useState(false);
 
   const hasGenerated = useRef(false);
   const stepsTimerRef = useRef<NodeJS.Timeout[]>([]);
@@ -161,7 +157,6 @@ export default function RedactionPage() {
     setGenerationState("generating");
     setThumbs(null);
     setFeedback("");
-    setShowParams(false);
 
     const newSteps: GenerationStep[] = INITIAL_STEPS.map((s) => ({
       ...s,
@@ -212,15 +207,11 @@ export default function RedactionPage() {
           <ArrowLeft className="h-4 w-4" />
           retour
         </Link>
-        <span className="text-sm font-medium text-plato-dk6">
-          {dossier.reference}
+        <span className="text-sm font-medium">
+          {generationState === "done" && acteLabel
+            ? `Nom de l'acte généré - ${acteLabel}`
+            : "Rédiger un acte"}
         </span>
-        {acteLabel && (
-          <>
-            <ChevronRight className="h-3 w-3 text-plato-dk4" />
-            <span className="text-sm font-semibold">{acteLabel}</span>
-          </>
-        )}
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -229,58 +220,34 @@ export default function RedactionPage() {
           <div className="flex-1 overflow-y-auto p-6 pb-0">
             {/* ── A. Modèle de référence ── */}
             <section className="mb-6">
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
-                Modèle de référence
+              <h3 className="mb-1 text-sm font-semibold text-plato-dk">
+                Sélectionnez un modèle de référence
               </h3>
               <p className="mb-3 text-xs text-plato-dk4">
-                Votre modèle structure la rédaction : ton, plan et formulations
-                adaptés à votre pratique.
+                Votre modèle structure la rédaction : ton, vocabulaire, style.
               </p>
 
               {!hasTemplates ? (
                 /* No templates yet → empty state + drop zone */
-                <div className="rounded-lg border border-dashed border-plato-bd bg-plato-bg p-5">
-                  <div className="mb-4 text-center">
-                    <Upload className="mx-auto mb-2 h-6 w-6 text-plato-dk4" />
-                    <p className="text-sm font-medium text-plato-dk">
-                      Importez vos propres modèles
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-plato-dk4">
-                      Ajoutez vos conclusions, assignations ou dires types
-                      (Word, PDF). Plato s&apos;appuie sur votre modèle pour
-                      reproduire votre ton, votre plan et vos formulations.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setTemplatesImported(true)}
-                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-plato-bd bg-white px-4 py-2.5 text-sm font-medium text-plato-dk hover:bg-gray-50"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Ajouter un modèle
-                  </button>
-                </div>
+                <button
+                  onClick={() => setTemplatesImported(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-plato-dk px-4 py-3 text-sm font-medium text-white hover:bg-gray-800"
+                >
+                  + Ajouter un premier modèle
+                </button>
               ) : selectedTemplate ? (
                 /* A template is selected → show it as a card */
-                <div className="rounded-lg border border-brand-500 bg-brand-50 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <FileText className="h-4 w-4 text-brand-500" />
-                      <div>
-                        <p className="text-sm font-medium text-brand-600">
-                          {selectedTemplate.fileName}
-                        </p>
-                        <p className="text-xs text-plato-dk6">
-                          {ACTE_TYPE_LABELS[selectedTemplate.acteType]}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSelectedTemplate(null)}
-                      className="text-plato-dk4 hover:text-plato-dk"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2.5 rounded-lg border border-plato-bd px-4 py-3">
+                  <FileText className="h-4 w-4 flex-shrink-0 text-plato-dk4" />
+                  <span className="flex-1 truncate text-sm font-medium text-plato-dk">
+                    {selectedTemplate.fileName}
+                  </span>
+                  <button
+                    onClick={() => setSelectedTemplate(null)}
+                    className="flex-shrink-0 text-plato-dk4 hover:text-plato-dk"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               ) : (
                 /* Templates exist but none selected → search + dropdown */
@@ -330,23 +297,20 @@ export default function RedactionPage() {
                     </div>
                   )}
 
-                  {/* Drop zone below search */}
-                  <div className="mt-3">
-                    <DropZone label="Déposez ou cliquez pour ajouter un modèle" compact />
-                  </div>
+                  <button className="mt-2 text-xs font-medium text-brand-500 hover:underline">
+                    + Ajouter un nouveau modèle
+                  </button>
                 </div>
               )}
             </section>
 
             {/* ── B. Pièces du dossier ── */}
             <section className="mb-6">
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
-                Pièces de contexte
+              <h3 className="mb-1 text-sm font-semibold text-plato-dk">
+                Ajouter des pièces de contexte
               </h3>
               <p className="mb-3 text-xs text-plato-dk4">
-                Ces documents enrichissent la génération : rapports d&apos;expertise,
-                factures, certificats... Plus le contexte est complet, plus l&apos;acte
-                sera précis.
+                Plus le contexte est complet, plus l&apos;acte sera précis.
               </p>
 
               {/* Search */}
@@ -355,7 +319,7 @@ export default function RedactionPage() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-plato-dk4" />
                   <input
                     type="text"
-                    placeholder="Recherchez une pièce..."
+                    placeholder="Recherchez une pièce du dossier.."
                     value={pieceSearch}
                     onChange={(e) => {
                       setPieceSearch(e.target.value);
@@ -385,8 +349,17 @@ export default function RedactionPage() {
                 )}
               </div>
 
-              {/* Drop zone */}
-              <DropZone label="Déposez ou cliquez pour ajouter un justificatif" compact />
+              {/* Upload hint */}
+              <div className="flex items-center gap-2 text-xs text-plato-dk4">
+                <Upload className="h-3.5 w-3.5" />
+                <span>
+                  Déposez ou{" "}
+                  <span className="font-medium text-plato-dk underline cursor-pointer">
+                    Parcourez
+                  </span>{" "}
+                  pour ajouter des documents.
+                </span>
+              </div>
 
               {/* Added pieces list */}
               {addedPieces.length > 0 && (
@@ -394,22 +367,10 @@ export default function RedactionPage() {
                   {addedPieces.map((piece) => (
                     <div
                       key={piece.id}
-                      className="group flex items-center gap-2.5 px-4 py-2.5 text-sm"
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm"
                     >
-                      <FileText className="h-4 w-4 flex-shrink-0 text-plato-dk4" />
-                      <span className="font-medium">{piece.name}</span>
-                      <span className="text-xs text-plato-dk4">{piece.type}</span>
-                      <div className="ml-auto flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <button className="text-plato-dk4 hover:text-plato-dk">
-                          <Eye className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => removePiece(piece.id)}
-                          className="text-plato-dk4 hover:text-red-500"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                      <FileText className="h-4 w-4 flex-shrink-0 text-blue-500" />
+                      <span className="font-medium text-plato-dk">{piece.name}</span>
                     </div>
                   ))}
                 </div>
@@ -418,17 +379,14 @@ export default function RedactionPage() {
 
             {/* ── C. Instructions ── */}
             <section className="mb-6">
-              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+              <h3 className="mb-3 text-sm font-semibold text-plato-dk">
                 Instructions
               </h3>
-              <p className="mb-3 text-xs text-plato-dk4">
-                Précisez la position à défendre, le ton souhaité, les points à développer ou à éviter.
-              </p>
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder={"Exemples d'instructions :\n• Adopter un ton offensif / modéré / conciliant\n• Défendre la position de la victime / de l'assureur\n• Insister sur tel poste de préjudice, minimiser tel autre\n• Citer la jurisprudence Civ. 2e, 14 avril 2016\n• Ne pas développer le poste DFT"}
-                rows={5}
+                placeholder="Exemple : adopter un ton offensif / modéré / conciliant, défendre la position de la victime / de l'assureur, insister sur tel poste de préjudice, minimiser tel autre.."
+                rows={6}
                 className="w-full resize-y rounded-lg border border-plato-bd px-4 py-3 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
               />
             </section>
@@ -454,10 +412,7 @@ export default function RedactionPage() {
                   Génération en cours...
                 </>
               ) : (
-                <>
-                  <Zap className="h-4 w-4" />
-                  Générer
-                </>
+                "+ Générer l'acte"
               )}
             </button>
           </div>
@@ -465,7 +420,6 @@ export default function RedactionPage() {
 
         {/* ──────── Right column — Preview ──────── */}
         <div className="flex-1 overflow-hidden bg-plato-bg">
-          <div className="h-1 bg-brand-500" />
           <div className="h-full overflow-y-auto p-8">
             {generationState === "idle" && !hasGenerated.current && (
               <IdleState />
@@ -479,14 +433,10 @@ export default function RedactionPage() {
               <DoneState
                 dossier={dossier}
                 template={selectedTemplate}
-                addedPieceIds={addedPieceIds}
-                instructions={instructions}
                 thumbs={thumbs}
                 setThumbs={setThumbs}
                 feedback={feedback}
                 setFeedback={setFeedback}
-                showParams={showParams}
-                setShowParams={setShowParams}
               />
             )}
           </div>
@@ -496,49 +446,21 @@ export default function RedactionPage() {
   );
 }
 
-/* ────────── Reusable drop zone ────────── */
-
-function DropZone({
-  label,
-  compact,
-}: {
-  label: string;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-plato-bd bg-plato-bg transition-colors hover:border-plato-dk4 cursor-pointer",
-        compact ? "px-4 py-4" : "px-6 py-8"
-      )}
-    >
-      <Upload className={cn("text-plato-dk4 mb-2", compact ? "h-5 w-5" : "h-6 w-6")} />
-      <p className={cn("text-center text-plato-dk6", compact ? "text-xs" : "text-sm")}>
-        Déposez ou{" "}
-        <span className="font-semibold text-brand-500 underline">cliquez</span>{" "}
-        pour ajouter
-      </p>
-    </div>
-  );
-}
-
 /* ────────── Empty / Idle state ────────── */
 
 function IdleState() {
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="max-w-md text-center">
-        <FileText className="mx-auto mb-4 h-12 w-12 text-plato-dk4" />
+      <div className="max-w-sm text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+          <FileText className="h-5 w-5 text-plato-dk4" />
+        </div>
         <p className="text-base font-semibold text-plato-dk">
           Rédigez un acte en contexte
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-plato-dk6">
-          Plato génère votre acte à partir des postes de préjudice que vous avez
-          créés. Les pièces justificatives de chaque poste et les montants du
-          chiffrage sont automatiquement récupérés pour alimenter la rédaction.
-        </p>
-        <p className="mt-3 text-sm text-plato-dk6">
-          Sélectionnez un modèle et lancez la génération.
+        <p className="mt-2 text-sm leading-relaxed text-plato-dk4">
+          Plato génère votre acte à partir des préjudices. Sélectionnez un
+          modèle et lancez la génération.
         </p>
       </div>
     </div>
@@ -662,53 +584,39 @@ function GeneratingState({ steps }: { steps: GenerationStep[] }) {
 function DoneState({
   dossier,
   template,
-  addedPieceIds,
-  instructions,
   thumbs,
   setThumbs,
   feedback,
   setFeedback,
-  showParams,
-  setShowParams,
 }: {
   dossier: ReturnType<typeof getDossier>;
   template: Template | null;
-  addedPieceIds: Set<string>;
-  instructions: string;
   thumbs: "up" | "down" | null;
   setThumbs: (t: "up" | "down" | null) => void;
   feedback: string;
   setFeedback: (f: string) => void;
-  showParams: boolean;
-  setShowParams: (b: boolean) => void;
 }) {
   if (!dossier || !template) return null;
 
   const acteLabel = ACTE_TYPE_LABELS[template.acteType];
-  const selectedPieces = dossier.pieces.filter((p) => addedPieceIds.has(p.id));
 
   return (
     <div className="mx-auto max-w-[780px]">
       {/* Action bar */}
-      <div className="mb-4 flex items-center justify-between rounded-lg border border-plato-bd bg-white px-4 py-2.5">
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-plato-bd bg-white px-5 py-3">
         <span className="text-sm font-medium text-plato-dk">
-          {acteLabel}
+          Nom de l&apos;acte généré - {acteLabel}
         </span>
 
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 rounded-lg bg-plato-dk px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
-            <Download className="h-3.5 w-3.5" />
-            Télécharger Word
-          </button>
-
-          <div className="ml-2 flex items-center gap-1">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setThumbs(thumbs === "up" ? null : "up")}
               className={cn(
                 "rounded-md p-1.5 transition-colors",
                 thumbs === "up"
-                  ? "bg-green-50 text-green-600"
-                  : "text-plato-dk4 hover:text-green-600 hover:bg-green-50"
+                  ? "text-plato-dk"
+                  : "text-plato-dk4 hover:text-plato-dk"
               )}
             >
               <ThumbsUp className="h-4 w-4" />
@@ -718,13 +626,18 @@ function DoneState({
               className={cn(
                 "rounded-md p-1.5 transition-colors",
                 thumbs === "down"
-                  ? "bg-red-50 text-red-500"
-                  : "text-plato-dk4 hover:text-red-500 hover:bg-red-50"
+                  ? "text-plato-dk"
+                  : "text-plato-dk4 hover:text-plato-dk"
               )}
             >
               <ThumbsDown className="h-4 w-4" />
             </button>
           </div>
+
+          <button className="flex items-center gap-1.5 rounded-lg border border-plato-dk px-4 py-2 text-sm font-medium text-plato-dk hover:bg-gray-50">
+            <Download className="h-4 w-4" />
+            Télécharger
+          </button>
         </div>
       </div>
 
@@ -747,57 +660,6 @@ function DoneState({
 
       {/* Document */}
       <div className="rounded-lg border border-plato-bd bg-white shadow-sm">
-        {/* Document header */}
-        <div className="border-b border-plato-bd px-8 pt-8 pb-4">
-          <div className="border-l-4 border-brand-500 pl-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-plato-dk4">
-              {acteLabel}
-            </p>
-            <p className="mt-1 text-lg font-semibold font-serif">
-              {acteLabel} ({new Date().toLocaleDateString("fr-FR", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "2-digit",
-              })})
-            </p>
-          </div>
-        </div>
-
-        {/* Collapsible params summary */}
-        <div className="border-b border-plato-bd">
-          <button
-            onClick={() => setShowParams(!showParams)}
-            className="flex w-full items-center gap-2 px-8 py-3 text-xs font-medium text-plato-dk6 hover:bg-gray-50"
-          >
-            <ChevronRight
-              className={cn(
-                "h-3 w-3 transition-transform",
-                showParams && "rotate-90"
-              )}
-            />
-            Paramètres de génération
-          </button>
-          {showParams && (
-            <div className="px-8 pb-3 text-xs text-plato-dk6 space-y-1">
-              <p>
-                <span className="font-medium">Modèle :</span> {template.fileName}
-              </p>
-              <p>
-                <span className="font-medium">Pièces :</span>{" "}
-                {selectedPieces.length > 0
-                  ? selectedPieces.map((p) => p.name).join(", ")
-                  : "Aucune"}
-              </p>
-              {instructions && (
-                <p>
-                  <span className="font-medium">Instructions :</span>{" "}
-                  &ldquo;{instructions}&rdquo;
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* Document body */}
         <div className="px-8 py-8 space-y-6 text-sm leading-relaxed text-plato-dk">
           <h2 className="text-lg font-bold font-serif">I. FAITS</h2>
