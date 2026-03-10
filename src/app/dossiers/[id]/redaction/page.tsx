@@ -32,15 +32,36 @@ type GenerationState = "idle" | "generating" | "done";
 
 interface GenerationStep {
   label: string;
+  description: string;
   status: "pending" | "active" | "done";
 }
 
 const INITIAL_STEPS: GenerationStep[] = [
-  { label: "Calculs récupérés", status: "pending" },
-  { label: "Rapport d'expertise analysé", status: "pending" },
-  { label: "Template appliqué", status: "pending" },
-  { label: "Rédaction de la discussion...", status: "pending" },
-  { label: "Mise en forme", status: "pending" },
+  {
+    label: "Lecture des pièces",
+    description: "Analyse du rapport d'expertise et des documents joints",
+    status: "pending",
+  },
+  {
+    label: "Extraction des données",
+    description: "Identification des postes de préjudice, montants, dates clés",
+    status: "pending",
+  },
+  {
+    label: "Application du template",
+    description: "Structuration selon votre modèle de conclusions",
+    status: "pending",
+  },
+  {
+    label: "Rédaction de l'argumentaire",
+    description: "Construction de la discussion juridique poste par poste",
+    status: "pending",
+  },
+  {
+    label: "Mise en forme finale",
+    description: "Vérification de la cohérence et formatage du document",
+    status: "pending",
+  },
 ];
 
 export default function RedactionPage() {
@@ -151,7 +172,7 @@ export default function RedactionPage() {
 
     clearStepTimers();
 
-    const delays = [600, 1200, 1800, 2400, 3200];
+    const delays = [800, 1800, 2800, 4200, 5800];
     delays.forEach((delay, i) => {
       const timer = setTimeout(() => {
         setSteps((prev) =>
@@ -526,38 +547,110 @@ function IdleState() {
 
 /* ────────── Generating loader ────────── */
 
+const GENERATION_TIPS = [
+  "Plato s'appuie sur les données du rapport pour chiffrer chaque poste de préjudice.",
+  "L'argumentaire est structuré poste par poste pour faciliter votre relecture.",
+  "Vous pourrez ajuster le document librement après la génération.",
+  "Les montants sont calculés d'après le référentiel et les éléments du dossier.",
+  "Chaque génération est unique et tient compte de vos instructions.",
+];
+
 function GeneratingState({ steps }: { steps: GenerationStep[] }) {
+  const doneCount = steps.filter((s) => s.status === "done").length;
+  const progress = Math.round((doneCount / steps.length) * 100);
+  const activeStep = steps.find((s) => s.status === "active") ?? steps[0];
+
+  const [tipIndex, setTipIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTipIndex((i) => (i + 1) % GENERATION_TIPS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="w-80 rounded-xl border border-plato-bd bg-white p-8 shadow-sm">
-        <div className="mb-6 flex items-center gap-3">
-          <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
-          <p className="text-sm font-semibold">Génération en cours...</p>
-        </div>
-        <div className="space-y-3">
-          {steps.map((step, i) => (
-            <div key={i} className="flex items-center gap-3">
-              {step.status === "done" && (
-                <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-accent-green" />
-              )}
-              {step.status === "active" && (
-                <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-brand-500" />
-              )}
-              {step.status === "pending" && (
-                <Circle className="h-4 w-4 flex-shrink-0 text-plato-dk4" />
-              )}
-              <span
+      <div className="w-full max-w-lg">
+        {/* Main card */}
+        <div className="rounded-2xl border border-plato-bd bg-white p-8 shadow-sm">
+          {/* Header */}
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-50">
+              <Loader2 className="h-7 w-7 animate-spin text-brand-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-plato-dk">
+              Rédaction en cours
+            </h3>
+            <p className="mt-1 text-sm text-plato-dk4">
+              {activeStep.description}
+            </p>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between text-xs text-plato-dk4">
+              <span>{activeStep.label}</span>
+              <span>{progress}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full rounded-full bg-brand-500 transition-all duration-700 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-3">
+            {steps.map((step, i) => (
+              <div
+                key={i}
                 className={cn(
-                  "text-sm",
-                  step.status === "done" && "text-plato-dk",
-                  step.status === "active" && "text-plato-dk font-medium",
-                  step.status === "pending" && "text-plato-dk4"
+                  "flex items-start gap-3 rounded-lg px-3 py-2.5 transition-all duration-300",
+                  step.status === "active" && "bg-brand-50/60",
+                  step.status === "done" && "opacity-60"
                 )}
               >
-                {step.label}
-              </span>
-            </div>
-          ))}
+                <div className="mt-0.5 flex-shrink-0">
+                  {step.status === "done" && (
+                    <CheckCircle2 className="h-4.5 w-4.5 text-accent-green" />
+                  )}
+                  {step.status === "active" && (
+                    <Loader2 className="h-4.5 w-4.5 animate-spin text-brand-500" />
+                  )}
+                  {step.status === "pending" && (
+                    <Circle className="h-4.5 w-4.5 text-plato-dk4/40" />
+                  )}
+                </div>
+                <div>
+                  <p
+                    className={cn(
+                      "text-sm leading-tight",
+                      step.status === "done" && "text-plato-dk",
+                      step.status === "active" && "font-medium text-plato-dk",
+                      step.status === "pending" && "text-plato-dk4"
+                    )}
+                  >
+                    {step.label}
+                  </p>
+                  {step.status === "active" && (
+                    <p className="mt-0.5 text-xs text-plato-dk4">
+                      {step.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Rotating tip */}
+        <div className="mt-4 rounded-xl border border-plato-bd bg-white px-5 py-3.5 text-center">
+          <p className="text-xs font-medium text-plato-dk4">
+            <Zap className="mr-1.5 -mt-0.5 inline-block h-3.5 w-3.5 text-brand-500" />
+            {GENERATION_TIPS[tipIndex]}
+          </p>
         </div>
       </div>
     </div>
