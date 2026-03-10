@@ -216,8 +216,24 @@ export default function RedactionPage() {
               </p>
 
               {!hasTemplates ? (
-                /* No templates yet → drop zone */
-                <DropZone label="Déposez ou cliquez pour ajouter un modèle" />
+                /* No templates yet → empty state + drop zone */
+                <div className="rounded-lg border border-dashed border-plato-bd bg-plato-bg p-5">
+                  <div className="mb-4 text-center">
+                    <Upload className="mx-auto mb-2 h-6 w-6 text-plato-dk4" />
+                    <p className="text-sm font-medium text-plato-dk">
+                      Importez vos propres modèles
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-plato-dk4">
+                      Ajoutez vos conclusions, assignations ou dires types
+                      (Word, PDF). Plato s&apos;appuie sur votre modèle pour
+                      reproduire votre ton, votre plan et vos formulations.
+                    </p>
+                  </div>
+                  <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-plato-bd bg-white px-4 py-2.5 text-sm font-medium text-plato-dk hover:bg-gray-50">
+                    <Upload className="h-4 w-4" />
+                    Ajouter un modèle
+                  </button>
+                </div>
               ) : selectedTemplate ? (
                 /* A template is selected → show it as a card */
                 <div className="rounded-lg border border-brand-500 bg-brand-50 px-4 py-3">
