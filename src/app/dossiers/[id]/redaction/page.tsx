@@ -401,12 +401,12 @@ export default function RedactionPage() {
                 Instructions
               </h3>
               <p className="mb-3 text-xs text-plato-dk4">
-                Orientez la rédaction selon vos besoins.
+                Précisez la position à défendre, le ton souhaité, les points à développer ou à éviter.
               </p>
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder={"Ex :\n• Insister sur le préjudice esthétique\n• Mentionner la jurisprudence Civ. 2e, 14 avril 2016\n• Ton plus offensif sur la résistance abusive\n• Ne pas développer le poste DFT"}
+                placeholder={"Exemples d'instructions :\n• Adopter un ton offensif / modéré / conciliant\n• Défendre la position de la victime / de l'assureur\n• Insister sur tel poste de préjudice, minimiser tel autre\n• Citer la jurisprudence Civ. 2e, 14 avril 2016\n• Ne pas développer le poste DFT"}
                 rows={5}
                 className="w-full resize-y rounded-lg border border-plato-bd px-4 py-3 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
               />
