@@ -47,7 +47,8 @@ export default function RedactionPage() {
   const params = useParams();
   const dossier = getDossier(params.id as string)!;
 
-  // Template state
+  // Template state — start with no templates imported (proto demo)
+  const [templatesImported, setTemplatesImported] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [templateSearch, setTemplateSearch] = useState("");
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
@@ -177,7 +178,7 @@ export default function RedactionPage() {
 
   const acteType = selectedTemplate?.acteType;
   const acteLabel = acteType ? ACTE_TYPE_LABELS[acteType] : null;
-  const hasTemplates = allTemplates.length > 0;
+  const hasTemplates = templatesImported && allTemplates.length > 0;
 
   return (
     <div className="flex h-screen flex-col">
@@ -229,7 +230,10 @@ export default function RedactionPage() {
                       reproduire votre ton, votre plan et vos formulations.
                     </p>
                   </div>
-                  <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-plato-bd bg-white px-4 py-2.5 text-sm font-medium text-plato-dk hover:bg-gray-50">
+                  <button
+                    onClick={() => setTemplatesImported(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-plato-bd bg-white px-4 py-2.5 text-sm font-medium text-plato-dk hover:bg-gray-50"
+                  >
                     <Upload className="h-4 w-4" />
                     Ajouter un modèle
                   </button>
