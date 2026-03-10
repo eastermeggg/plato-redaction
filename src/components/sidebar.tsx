@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PenLine } from "lucide-react";
+import { PenLine, Menu } from "lucide-react";
 import { Dossier } from "@/data/types";
 import { formatShortDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -73,8 +73,12 @@ export function Sidebar({ dossier }: { dossier: Dossier }) {
               : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
           )}
         >
-          <PenLine className="h-4 w-4" />
-          Rédaction
+          {isRedaction ? (
+            <Menu className="h-4 w-4" />
+          ) : (
+            <PenLine className="h-4 w-4" />
+          )}
+          {isRedaction ? "Rédaction d'un acte" : "Rédaction"}
         </Link>
       </nav>
 
