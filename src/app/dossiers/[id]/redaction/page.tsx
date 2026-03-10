@@ -9,9 +9,9 @@ import {
   FileText,
   Loader2,
   Download,
-  RefreshCw,
   ChevronRight,
-  Star,
+  ThumbsUp,
+  ThumbsDown,
   Send,
   Zap,
   Circle,
@@ -71,7 +71,7 @@ export default function RedactionPage() {
   const [instructions, setInstructions] = useState("");
   const [generationState, setGenerationState] = useState<GenerationState>("idle");
   const [steps, setSteps] = useState<GenerationStep[]>(INITIAL_STEPS);
-  const [rating, setRating] = useState(0);
+  const [thumbs, setThumbs] = useState<"up" | "down" | null>(null);
   const [feedback, setFeedback] = useState("");
   const [showParams, setShowParams] = useState(false);
 
@@ -138,7 +138,7 @@ export default function RedactionPage() {
     if (!selectedTemplate) return;
 
     setGenerationState("generating");
-    setRating(0);
+    setThumbs(null);
     setFeedback("");
     setShowParams(false);
 
@@ -460,13 +460,12 @@ export default function RedactionPage() {
                 template={selectedTemplate}
                 addedPieceIds={addedPieceIds}
                 instructions={instructions}
-                rating={rating}
-                setRating={setRating}
+                thumbs={thumbs}
+                setThumbs={setThumbs}
                 feedback={feedback}
                 setFeedback={setFeedback}
                 showParams={showParams}
                 setShowParams={setShowParams}
-                onRegenerate={handleGenerate}
               />
             )}
           </div>
@@ -572,25 +571,23 @@ function DoneState({
   template,
   addedPieceIds,
   instructions,
-  rating,
-  setRating,
+  thumbs,
+  setThumbs,
   feedback,
   setFeedback,
   showParams,
   setShowParams,
-  onRegenerate,
 }: {
   dossier: ReturnType<typeof getDossier>;
   template: Template | null;
   addedPieceIds: Set<string>;
   instructions: string;
-  rating: number;
-  setRating: (r: number) => void;
+  thumbs: "up" | "down" | null;
+  setThumbs: (t: "up" | "down" | null) => void;
   feedback: string;
   setFeedback: (f: string) => void;
   showParams: boolean;
   setShowParams: (b: boolean) => void;
-  onRegenerate: () => void;
 }) {
   if (!dossier || !template) return null;
 
@@ -601,44 +598,49 @@ function DoneState({
     <div className="mx-auto max-w-[780px]">
       {/* Action bar */}
       <div className="mb-4 flex items-center justify-between rounded-lg border border-plato-bd bg-white px-4 py-2.5">
-        <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-plato-dk">
+          {acteLabel}
+        </span>
+
+        <div className="flex items-center gap-2">
           <button className="flex items-center gap-1.5 rounded-lg bg-plato-dk px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
             <Download className="h-3.5 w-3.5" />
             Télécharger Word
           </button>
-          <button
-            onClick={onRegenerate}
-            className="flex items-center gap-1.5 rounded-lg border border-plato-bd px-3 py-1.5 text-xs font-medium text-plato-dk6 hover:bg-gray-50"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Re-générer
-          </button>
-        </div>
 
-        <div className="flex items-center gap-0.5">
-          {[1, 2, 3, 4, 5].map((n) => (
+          <div className="ml-2 flex items-center gap-1">
             <button
-              key={n}
-              onClick={() => setRating(n)}
-              className="text-plato-dk4 hover:text-brand-500 transition-colors"
+              onClick={() => setThumbs(thumbs === "up" ? null : "up")}
+              className={cn(
+                "rounded-md p-1.5 transition-colors",
+                thumbs === "up"
+                  ? "bg-green-50 text-green-600"
+                  : "text-plato-dk4 hover:text-green-600 hover:bg-green-50"
+              )}
             >
-              <Star
-                className={cn(
-                  "h-4 w-4",
-                  n <= rating && "fill-brand-500 text-brand-500"
-                )}
-              />
+              <ThumbsUp className="h-4 w-4" />
             </button>
-          ))}
+            <button
+              onClick={() => setThumbs(thumbs === "down" ? null : "down")}
+              className={cn(
+                "rounded-md p-1.5 transition-colors",
+                thumbs === "down"
+                  ? "bg-red-50 text-red-500"
+                  : "text-plato-dk4 hover:text-red-500 hover:bg-red-50"
+              )}
+            >
+              <ThumbsDown className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Feedback bar */}
-      {rating > 0 && (
+      {/* Feedback bar — appears when a thumb is selected */}
+      {thumbs !== null && (
         <div className="mb-4 flex gap-2 rounded-lg border border-plato-bd bg-white px-4 py-2.5">
           <input
             type="text"
-            placeholder="Commentaire (optionnel)"
+            placeholder="Un commentaire ? (optionnel)"
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             className="flex-1 text-sm placeholder:text-plato-dk4 focus:outline-none"
