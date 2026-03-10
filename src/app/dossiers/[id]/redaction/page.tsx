@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
@@ -10,19 +10,20 @@ import {
   Loader2,
   Download,
   RefreshCw,
-  Check,
   ChevronRight,
   Star,
   Send,
   Zap,
   Circle,
   CheckCircle2,
+  Upload,
+  Eye,
+  Trash2,
+  X,
 } from "lucide-react";
-import { getDossier, getTemplatesGrouped } from "@/data/mock";
+import { getDossier, getAllTemplates } from "@/data/mock";
 import {
   ACTE_TYPE_LABELS,
-  type ActeType,
-  type Piece,
   type Template,
 } from "@/data/types";
 import { cn } from "@/lib/utils";
@@ -46,10 +47,27 @@ export default function RedactionPage() {
   const params = useParams();
   const dossier = getDossier(params.id as string)!;
 
+  // Template state
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [selectedPieceIds, setSelectedPieceIds] = useState<Set<string>>(new Set());
-  const [instructions, setInstructions] = useState("");
   const [templateSearch, setTemplateSearch] = useState("");
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const templateRef = useRef<HTMLDivElement>(null);
+
+  // Pieces state — auto-add "Rapport d'expertise" on mount
+  const [addedPieceIds, setAddedPieceIds] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    const rapport = dossier.pieces.find((p) =>
+      p.name.toLowerCase().includes("rapport")
+    );
+    if (rapport) initial.add(rapport.id);
+    return initial;
+  });
+  const [pieceSearch, setPieceSearch] = useState("");
+  const [pieceDropdownOpen, setPieceDropdownOpen] = useState(false);
+  const pieceRef = useRef<HTMLDivElement>(null);
+
+  // Instructions + generation
+  const [instructions, setInstructions] = useState("");
   const [generationState, setGenerationState] = useState<GenerationState>("idle");
   const [steps, setSteps] = useState<GenerationStep[]>(INITIAL_STEPS);
   const [rating, setRating] = useState(0);
@@ -59,29 +77,53 @@ export default function RedactionPage() {
   const hasGenerated = useRef(false);
   const stepsTimerRef = useRef<NodeJS.Timeout[]>([]);
 
-  const grouped = useMemo(() => getTemplatesGrouped(), []);
+  const allTemplates = useMemo(() => getAllTemplates(), []);
 
-  // Filter templates by search
-  const filteredGrouped = useMemo(() => {
-    if (!templateSearch.trim()) return grouped;
+  // Filtered templates for search dropdown
+  const filteredTemplates = useMemo(() => {
+    if (!templateSearch.trim()) return allTemplates;
     const q = templateSearch.toLowerCase();
-    const result: Record<string, Template[]> = {};
-    for (const [type, templates] of Object.entries(grouped)) {
-      const filtered = templates.filter(
-        (t) =>
-          t.name.toLowerCase().includes(q) ||
-          t.fileName.toLowerCase().includes(q)
-      );
-      if (filtered.length > 0) result[type] = filtered;
-    }
-    return result;
-  }, [grouped, templateSearch]);
+    return allTemplates.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.fileName.toLowerCase().includes(q)
+    );
+  }, [allTemplates, templateSearch]);
 
-  function togglePiece(pieceId: string) {
-    setSelectedPieceIds((prev) => {
+  // Pieces: added list + available for search
+  const addedPieces = useMemo(
+    () => dossier.pieces.filter((p) => addedPieceIds.has(p.id)),
+    [dossier.pieces, addedPieceIds]
+  );
+  const availablePieces = useMemo(() => {
+    const q = pieceSearch.toLowerCase();
+    return dossier.pieces.filter(
+      (p) => !addedPieceIds.has(p.id) && p.name.toLowerCase().includes(q)
+    );
+  }, [dossier.pieces, addedPieceIds, pieceSearch]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (templateRef.current && !templateRef.current.contains(e.target as Node))
+        setTemplateDropdownOpen(false);
+      if (pieceRef.current && !pieceRef.current.contains(e.target as Node))
+        setPieceDropdownOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function addPiece(id: string) {
+    setAddedPieceIds((prev) => new Set(prev).add(id));
+    setPieceSearch("");
+    setPieceDropdownOpen(false);
+  }
+
+  function removePiece(id: string) {
+    setAddedPieceIds((prev) => {
       const next = new Set(prev);
-      if (next.has(pieceId)) next.delete(pieceId);
-      else next.add(pieceId);
+      next.delete(id);
       return next;
     });
   }
@@ -99,27 +141,25 @@ export default function RedactionPage() {
     setFeedback("");
     setShowParams(false);
 
-    // Reset steps
-    const newSteps: GenerationStep[] = INITIAL_STEPS.map((s) => ({ ...s, status: "pending" }));
+    const newSteps: GenerationStep[] = INITIAL_STEPS.map((s) => ({
+      ...s,
+      status: "pending",
+    }));
     newSteps[0].status = "active";
     setSteps(newSteps);
 
     clearStepTimers();
 
-    // Simulate staggered step progression
     const delays = [600, 1200, 1800, 2400, 3200];
     delays.forEach((delay, i) => {
       const timer = setTimeout(() => {
-        setSteps((prev) => {
-          const updated = prev.map((s, j) => {
+        setSteps((prev) =>
+          prev.map((s, j) => {
             if (j === i) return { ...s, status: "done" as const };
             if (j === i + 1) return { ...s, status: "active" as const };
             return s;
-          });
-          return updated;
-        });
-
-        // Last step → done
+          })
+        );
         if (i === delays.length - 1) {
           setTimeout(() => {
             setGenerationState("done");
@@ -137,6 +177,7 @@ export default function RedactionPage() {
 
   const acteType = selectedTemplate?.acteType;
   const acteLabel = acteType ? ACTE_TYPE_LABELS[acteType] : null;
+  const hasTemplates = allTemplates.length > 0;
 
   return (
     <div className="flex h-screen flex-col">
@@ -164,111 +205,176 @@ export default function RedactionPage() {
         {/* ──────── Left column — Parameters ──────── */}
         <div className="flex w-[400px] flex-shrink-0 flex-col border-r border-plato-bd">
           <div className="flex-1 overflow-y-auto p-6 pb-0">
-            {/* A. Template */}
+            {/* ── A. Modèle de référence ── */}
             <section className="mb-6">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
-                A. Template
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+                Modèle de référence
               </h3>
-              <div className="relative mb-3">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-plato-dk4" />
-                <input
-                  type="text"
-                  placeholder="Rechercher..."
-                  value={templateSearch}
-                  onChange={(e) => setTemplateSearch(e.target.value)}
-                  className="w-full rounded-lg border border-plato-bd py-2 pl-9 pr-4 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
-                />
-              </div>
 
-              <div className="space-y-3">
-                {Object.entries(filteredGrouped).map(([type, templates]) => (
-                  <div key={type}>
-                    <p className="mb-1.5 text-xs font-medium text-plato-dk6">
-                      {ACTE_TYPE_LABELS[type as ActeType] || type} ({templates.length})
-                    </p>
-                    <div className="space-y-1">
-                      {templates.map((tpl) => (
-                        <label
-                          key={tpl.id}
-                          className={cn(
-                            "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors",
-                            selectedTemplate?.id === tpl.id
-                              ? "border-brand-500 bg-brand-50 text-brand-600"
-                              : "border-plato-bd hover:border-plato-dk4"
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name="template"
-                            checked={selectedTemplate?.id === tpl.id}
-                            onChange={() => setSelectedTemplate(tpl)}
-                            className="sr-only"
-                          />
-                          <div
-                            className={cn(
-                              "flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full border-2",
-                              selectedTemplate?.id === tpl.id
-                                ? "border-brand-500 bg-brand-500"
-                                : "border-plato-dk4"
-                            )}
-                          >
-                            {selectedTemplate?.id === tpl.id && (
-                              <div className="h-1.5 w-1.5 rounded-full bg-white" />
-                            )}
-                          </div>
-                          <span className="truncate">{tpl.name}</span>
-                        </label>
-                      ))}
+              {!hasTemplates ? (
+                /* No templates yet → drop zone */
+                <DropZone label="Déposez ou cliquez pour ajouter un modèle" />
+              ) : selectedTemplate ? (
+                /* A template is selected → show it as a card */
+                <div className="rounded-lg border border-brand-500 bg-brand-50 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <FileText className="h-4 w-4 text-brand-500" />
+                      <div>
+                        <p className="text-sm font-medium text-brand-600">
+                          {selectedTemplate.fileName}
+                        </p>
+                        <p className="text-xs text-plato-dk6">
+                          {ACTE_TYPE_LABELS[selectedTemplate.acteType]}
+                        </p>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => setSelectedTemplate(null)}
+                      className="text-plato-dk4 hover:text-plato-dk"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
-                ))}
-              </div>
-
-              <div className="mt-3 flex items-center gap-3 text-xs">
-                <button className="text-brand-500 hover:text-brand-600 font-medium">
-                  + Ajouter
-                </button>
-                <Link
-                  href="/bibliotheque"
-                  className="text-brand-500 hover:text-brand-600 font-medium"
-                >
-                  Bibliothèque &rarr;
-                </Link>
-              </div>
-            </section>
-
-            {/* B. Pièces du dossier */}
-            <section className="mb-6">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
-                B. Pièces du dossier
-              </h3>
-              <div className="space-y-1">
-                {dossier.pieces.map((piece) => (
-                  <label
-                    key={piece.id}
-                    className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-plato-bd px-3 py-2 text-sm transition-colors hover:border-plato-dk4"
-                  >
+                </div>
+              ) : (
+                /* Templates exist but none selected → search + dropdown */
+                <div ref={templateRef} className="relative">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-plato-dk4" />
                     <input
-                      type="checkbox"
-                      checked={selectedPieceIds.has(piece.id)}
-                      onChange={() => togglePiece(piece.id)}
-                      className="h-4 w-4 rounded border-plato-dk4 text-brand-500 focus:ring-brand-500"
+                      type="text"
+                      placeholder="Rechercher un modèle..."
+                      value={templateSearch}
+                      onChange={(e) => {
+                        setTemplateSearch(e.target.value);
+                        setTemplateDropdownOpen(true);
+                      }}
+                      onFocus={() => setTemplateDropdownOpen(true)}
+                      className="w-full rounded-lg border border-plato-bd py-2.5 pl-9 pr-4 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
                     />
-                    <span className="truncate">{piece.name}</span>
-                  </label>
-                ))}
-              </div>
+                  </div>
+
+                  {templateDropdownOpen && (
+                    <div className="absolute left-0 right-0 z-20 mt-1 max-h-52 overflow-y-auto rounded-lg border border-plato-bd bg-white shadow-lg">
+                      {filteredTemplates.length > 0 ? (
+                        filteredTemplates.map((tpl) => (
+                          <button
+                            key={tpl.id}
+                            onClick={() => {
+                              setSelectedTemplate(tpl);
+                              setTemplateSearch("");
+                              setTemplateDropdownOpen(false);
+                            }}
+                            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-gray-50"
+                          >
+                            <FileText className="h-4 w-4 flex-shrink-0 text-plato-dk4" />
+                            <div>
+                              <p className="font-medium">{tpl.fileName}</p>
+                              <p className="text-xs text-plato-dk6">
+                                {ACTE_TYPE_LABELS[tpl.acteType]}
+                              </p>
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-4 py-3 text-sm text-plato-dk4">
+                          Aucun modèle trouvé
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Drop zone below search */}
+                  <div className="mt-3">
+                    <DropZone label="Déposez ou cliquez pour ajouter un modèle" compact />
+                  </div>
+                </div>
+              )}
             </section>
 
-            {/* C. Instructions */}
+            {/* ── B. Pièces du dossier ── */}
             <section className="mb-6">
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
-                C. Instructions
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+                Ajouter des pièces justificatives
+              </h3>
+
+              {/* Search */}
+              <div ref={pieceRef} className="relative mb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-plato-dk4" />
+                  <input
+                    type="text"
+                    placeholder="Recherchez une pièce..."
+                    value={pieceSearch}
+                    onChange={(e) => {
+                      setPieceSearch(e.target.value);
+                      setPieceDropdownOpen(true);
+                    }}
+                    onFocus={() => setPieceDropdownOpen(true)}
+                    className="w-full rounded-lg border border-plato-bd py-2.5 pl-9 pr-4 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
+                  />
+                </div>
+
+                {pieceDropdownOpen && availablePieces.length > 0 && (
+                  <div className="absolute left-0 right-0 z-20 mt-1 max-h-40 overflow-y-auto rounded-lg border border-plato-bd bg-white shadow-lg">
+                    {availablePieces.map((piece) => (
+                      <button
+                        key={piece.id}
+                        onClick={() => addPiece(piece.id)}
+                        className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-gray-50"
+                      >
+                        <FileText className="h-4 w-4 flex-shrink-0 text-plato-dk4" />
+                        <span>{piece.name}</span>
+                        <span className="ml-auto text-xs text-plato-dk4">
+                          {piece.type}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Drop zone */}
+              <DropZone label="Déposez ou cliquez pour ajouter un justificatif" compact />
+
+              {/* Added pieces list */}
+              {addedPieces.length > 0 && (
+                <div className="mt-3 divide-y divide-plato-bd rounded-lg border border-plato-bd">
+                  {addedPieces.map((piece) => (
+                    <div
+                      key={piece.id}
+                      className="group flex items-center gap-2.5 px-4 py-2.5 text-sm"
+                    >
+                      <FileText className="h-4 w-4 flex-shrink-0 text-plato-dk4" />
+                      <span className="font-medium">{piece.name}</span>
+                      <span className="text-xs text-plato-dk4">{piece.type}</span>
+                      <div className="ml-auto flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+                        <button className="text-plato-dk4 hover:text-plato-dk">
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => removePiece(piece.id)}
+                          className="text-plato-dk4 hover:text-red-500"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* ── C. Instructions ── */}
+            <section className="mb-6">
+              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+                Instructions
               </h3>
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Ex: Insister sur le préjudice..."
+                placeholder="Ex: Insister sur le préjudice esthétique..."
                 rows={4}
                 className="w-full resize-y rounded-lg border border-plato-bd px-4 py-3 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
               />
@@ -320,7 +426,7 @@ export default function RedactionPage() {
               <DoneState
                 dossier={dossier}
                 template={selectedTemplate}
-                selectedPieceIds={selectedPieceIds}
+                addedPieceIds={addedPieceIds}
                 instructions={instructions}
                 rating={rating}
                 setRating={setRating}
@@ -338,21 +444,56 @@ export default function RedactionPage() {
   );
 }
 
-/* ────────── Sub-components ────────── */
+/* ────────── Reusable drop zone ────────── */
+
+function DropZone({
+  label,
+  compact,
+}: {
+  label: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-plato-bd bg-plato-bg transition-colors hover:border-plato-dk4 cursor-pointer",
+        compact ? "px-4 py-4" : "px-6 py-8"
+      )}
+    >
+      <Upload className={cn("text-plato-dk4 mb-2", compact ? "h-5 w-5" : "h-6 w-6")} />
+      <p className={cn("text-center text-plato-dk6", compact ? "text-xs" : "text-sm")}>
+        Déposez ou{" "}
+        <span className="font-semibold text-brand-500 underline">cliquez</span>{" "}
+        pour ajouter
+      </p>
+    </div>
+  );
+}
+
+/* ────────── Empty / Idle state ────────── */
 
 function IdleState() {
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="text-center text-plato-dk4">
-        <FileText className="mx-auto mb-3 h-12 w-12" />
-        <p className="text-sm font-medium">Aucun acte généré</p>
-        <p className="mt-1 text-xs">
-          Configurez les paramètres à gauche puis lancez la génération.
+      <div className="max-w-md text-center">
+        <FileText className="mx-auto mb-4 h-12 w-12 text-plato-dk4" />
+        <p className="text-base font-semibold text-plato-dk">
+          Rédigez un acte en contexte
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-plato-dk6">
+          Plato génère votre acte à partir des postes de préjudice que vous avez
+          créés. Les pièces justificatives de chaque poste et les montants du
+          chiffrage sont automatiquement récupérés pour alimenter la rédaction.
+        </p>
+        <p className="mt-3 text-sm text-plato-dk6">
+          Sélectionnez un modèle et lancez la génération.
         </p>
       </div>
     </div>
   );
 }
+
+/* ────────── Generating loader ────────── */
 
 function GeneratingState({ steps }: { steps: GenerationStep[] }) {
   return (
@@ -392,10 +533,12 @@ function GeneratingState({ steps }: { steps: GenerationStep[] }) {
   );
 }
 
+/* ────────── Done state — document preview ────────── */
+
 function DoneState({
   dossier,
   template,
-  selectedPieceIds,
+  addedPieceIds,
   instructions,
   rating,
   setRating,
@@ -407,7 +550,7 @@ function DoneState({
 }: {
   dossier: ReturnType<typeof getDossier>;
   template: Template | null;
-  selectedPieceIds: Set<string>;
+  addedPieceIds: Set<string>;
   instructions: string;
   rating: number;
   setRating: (r: number) => void;
@@ -420,7 +563,7 @@ function DoneState({
   if (!dossier || !template) return null;
 
   const acteLabel = ACTE_TYPE_LABELS[template.acteType];
-  const selectedPieces = dossier.pieces.filter((p) => selectedPieceIds.has(p.id));
+  const selectedPieces = dossier.pieces.filter((p) => addedPieceIds.has(p.id));
 
   return (
     <div className="mx-auto max-w-[780px]">
@@ -440,28 +583,25 @@ function DoneState({
           </button>
         </div>
 
-        <div className="flex items-center gap-4">
-          {/* Star rating */}
-          <div className="flex items-center gap-0.5">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                onClick={() => setRating(n)}
-                className="text-plato-dk4 hover:text-brand-500 transition-colors"
-              >
-                <Star
-                  className={cn(
-                    "h-4 w-4",
-                    n <= rating && "fill-brand-500 text-brand-500"
-                  )}
-                />
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => setRating(n)}
+              className="text-plato-dk4 hover:text-brand-500 transition-colors"
+            >
+              <Star
+                className={cn(
+                  "h-4 w-4",
+                  n <= rating && "fill-brand-500 text-brand-500"
+                )}
+              />
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Feedback bar (shows when rating is set) */}
+      {/* Feedback bar */}
       {rating > 0 && (
         <div className="mb-4 flex gap-2 rounded-lg border border-plato-bd bg-white px-4 py-2.5">
           <input
@@ -513,7 +653,7 @@ function DoneState({
           {showParams && (
             <div className="px-8 pb-3 text-xs text-plato-dk6 space-y-1">
               <p>
-                <span className="font-medium">Template :</span> {template.fileName}
+                <span className="font-medium">Modèle :</span> {template.fileName}
               </p>
               <p>
                 <span className="font-medium">Pièces :</span>{" "}
@@ -552,18 +692,14 @@ function DoneState({
               soit du 3 février 2026 au 15 juin 2026. Sur la base d&apos;une indemnisation
               de 28&nbsp;&euro;/jour, il est demandé :
             </p>
-            <p className="font-semibold">
-              Montant : 12&nbsp;400&nbsp;&euro;
-            </p>
+            <p className="font-semibold">Montant : 12&nbsp;400&nbsp;&euro;</p>
 
             <h3 className="font-semibold">B. Souffrances endurées</h3>
             <p>
               Cotées 4/7 par l&apos;expert. L&apos;importance des souffrances subies
               justifie une indemnisation à hauteur de :
             </p>
-            <p className="font-semibold">
-              Montant : 18&nbsp;000&nbsp;&euro;
-            </p>
+            <p className="font-semibold">Montant : 18&nbsp;000&nbsp;&euro;</p>
 
             <h3 className="font-semibold">C. Dépenses de santé actuelles (DSA)</h3>
             <p>
