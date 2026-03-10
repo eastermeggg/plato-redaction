@@ -397,14 +397,17 @@ export default function RedactionPage() {
 
             {/* ── C. Instructions ── */}
             <section className="mb-6">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
                 Instructions
               </h3>
+              <p className="mb-3 text-xs text-plato-dk4">
+                Orientez la rédaction selon vos besoins.
+              </p>
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Ex: Insister sur le préjudice esthétique..."
-                rows={4}
+                placeholder={"Ex :\n• Insister sur le préjudice esthétique\n• Mentionner la jurisprudence Civ. 2e, 14 avril 2016\n• Ton plus offensif sur la résistance abusive\n• Ne pas développer le poste DFT"}
+                rows={5}
                 className="w-full resize-y rounded-lg border border-plato-bd px-4 py-3 text-sm placeholder:text-plato-dk4 focus:border-brand-500 focus:outline-none"
               />
             </section>
