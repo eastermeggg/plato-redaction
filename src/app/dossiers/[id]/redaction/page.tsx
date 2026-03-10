@@ -207,9 +207,13 @@ export default function RedactionPage() {
           <div className="flex-1 overflow-y-auto p-6 pb-0">
             {/* ── A. Modèle de référence ── */}
             <section className="mb-6">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
                 Modèle de référence
               </h3>
+              <p className="mb-3 text-xs text-plato-dk4">
+                Votre modèle structure la rédaction : ton, plan et formulations
+                adaptés à votre pratique.
+              </p>
 
               {!hasTemplates ? (
                 /* No templates yet → drop zone */
@@ -295,9 +299,14 @@ export default function RedactionPage() {
 
             {/* ── B. Pièces du dossier ── */}
             <section className="mb-6">
-              <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
-                Ajouter des pièces justificatives
+              <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-plato-dk6">
+                Pièces de contexte
               </h3>
+              <p className="mb-3 text-xs text-plato-dk4">
+                Ces documents enrichissent la génération : rapports d&apos;expertise,
+                factures, certificats... Plus le contexte est complet, plus l&apos;acte
+                sera précis.
+              </p>
 
               {/* Search */}
               <div ref={pieceRef} className="relative mb-3">
