@@ -1,7 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --dk: #292524;
+  --dk6: #78716C;
+  --dk4: #A8A29E;
+  --bd: #E7E5E3;
+  --bg: #F8F7F5;
+  --w: #FFFFFF;
+  --or: #EA681E;
+  --orbg: rgba(255,92,0,.12);
+  --pu: #8B5CF6;
+  --gn: #16A34A;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--dk);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Crimson Text', Georgia, serif;
 }

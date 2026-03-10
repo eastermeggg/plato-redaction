@@ -1,87 +1,74 @@
 import { Dossier, Template } from "./types";
 
 export const MOCK_TEMPLATES: Template[] = [
-  { id: "tpl-1", name: "Modèle Knispel", acteType: "assignation" },
-  { id: "tpl-2", name: "Modèle Dupont", acteType: "assignation" },
-  { id: "tpl-3", name: "Modèle Knispel", acteType: "demande-amiable" },
-  { id: "tpl-4", name: "Modèle Martin", acteType: "conclusions" },
-  { id: "tpl-5", name: "Modèle Standard", acteType: "requete" },
-  { id: "tpl-6", name: "Modèle Cabinet", acteType: "mise-en-demeure" },
+  // Conclusions (4)
+  { id: "tpl-1", name: "Dupont_24", fileName: "Conclusions_Dupont_2024.docx", acteType: "conclusions", uploadedAt: "2024-10-03" },
+  { id: "tpl-2", name: "Bernard_25", fileName: "Conclusions_Bernard_2025.docx", acteType: "conclusions", uploadedAt: "2025-01-15" },
+  { id: "tpl-3", name: "Morel_25", fileName: "Conclusions_Morel_2025.docx", acteType: "conclusions", uploadedAt: "2025-02-20" },
+  { id: "tpl-4", name: "Petit_24", fileName: "Conclusions_Petit_2024.docx", acteType: "conclusions", uploadedAt: "2024-11-08" },
+  // Assignations (2)
+  { id: "tpl-5", name: "Martin_23", fileName: "Assignation_Martin_2023.docx", acteType: "assignation", uploadedAt: "2023-06-22" },
+  { id: "tpl-6", name: "Roy_25", fileName: "Assignation_Roy_2025.docx", acteType: "assignation", uploadedAt: "2025-01-10" },
+  // Demandes amiables (1)
+  { id: "tpl-7", name: "Leroy_25", fileName: "DA_Leroy_2025.docx", acteType: "demande-amiable", uploadedAt: "2025-02-08" },
 ];
 
 export const MOCK_DOSSIERS: Record<string, Dossier> = {
   "parapluie-042": {
     id: "parapluie-042",
-    reference: "PARAPLUIE-042",
-    clientName: "L.",
-    clientFirstName: "Sophie",
-    age: 31,
-    gender: "Femme",
-    birthDate: "1994-09-28",
-    accidentDate: "2023-03-15",
-    consolidationDate: "2024-01-12",
-    liquidationDate: "2026-03-02",
-    chiffrageTotal: 20520,
+    reference: "19023802983",
+    clientName: "Gross",
+    clientFirstName: "Victor",
+    age: 34,
+    gender: "Homme",
+    birthDate: "1991-05-24",
+    accidentDate: "2026-02-03",
+    consolidationDate: "2026-06-15",
+    chiffrageTotal: 247,
     pieces: [
       {
         id: "p-1",
-        name: "Rapport d'expertise médicale du Dr. Bernard",
-        type: "Expertise médicale",
-        uploadedAt: "2024-02-15",
+        name: "Rapport d'expertise",
+        type: "Expertise",
+        uploadedAt: "2026-01-15",
       },
       {
         id: "p-2",
-        name: "Certificat médical initial — CHU Lyon",
-        type: "Certificat médical",
-        uploadedAt: "2023-03-16",
+        name: "Factures kiné",
+        type: "Factures",
+        uploadedAt: "2025-12-20",
       },
       {
         id: "p-3",
-        name: "Constat amiable d'accident",
-        type: "Constat",
-        uploadedAt: "2023-03-15",
+        name: "PV accident",
+        type: "PV",
+        uploadedAt: "2026-02-03",
       },
       {
         id: "p-4",
-        name: "Procès-verbal de police",
-        type: "PV",
-        uploadedAt: "2023-03-20",
-      },
-      {
-        id: "p-5",
-        name: "Factures de soins — Kinésithérapie",
-        type: "Factures",
-        uploadedAt: "2024-06-10",
-      },
-      {
-        id: "p-6",
-        name: "Attestation employeur — Arrêt de travail",
-        type: "Attestation",
-        uploadedAt: "2023-04-01",
-      },
-      {
-        id: "p-7",
-        name: "Devis prothèse dentaire",
-        type: "Devis",
-        uploadedAt: "2024-08-22",
+        name: "Jugement réf.",
+        type: "Jugement",
+        uploadedAt: "2026-01-10",
       },
     ],
     actes: [
       {
         id: "a-1",
-        type: "assignation",
-        title: "Assignation — Sophie L. c/ AXA",
+        type: "conclusions",
+        title: "Conclusions",
         createdAt: "2026-03-10",
-        templateName: "Modèle Knispel",
-        piecesCount: 4,
+        templateName: "Conclusions_Dupont_2024",
+        piecesCount: 3,
+        status: "generated",
       },
       {
         id: "a-2",
         type: "demande-amiable",
-        title: "Demande amiable — Sophie L. c/ AXA",
+        title: "Dem. amiable",
         createdAt: "2026-03-08",
-        templateName: "Modèle Knispel",
-        piecesCount: 3,
+        templateName: "DA_Leroy_2025",
+        piecesCount: 2,
+        status: "generated",
       },
     ],
   },
@@ -93,4 +80,18 @@ export function getDossier(id: string): Dossier | undefined {
 
 export function getTemplatesForType(acteType: string): Template[] {
   return MOCK_TEMPLATES.filter((t) => t.acteType === acteType);
+}
+
+export function getAllTemplates(): Template[] {
+  return MOCK_TEMPLATES;
+}
+
+/** Templates grouped by acte type for the library and template picker */
+export function getTemplatesGrouped(): Record<string, Template[]> {
+  const grouped: Record<string, Template[]> = {};
+  for (const tpl of MOCK_TEMPLATES) {
+    if (!grouped[tpl.acteType]) grouped[tpl.acteType] = [];
+    grouped[tpl.acteType].push(tpl);
+  }
+  return grouped;
 }

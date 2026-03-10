@@ -1,62 +1,72 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-  PenLine,
+  ChevronDown,
   Copy,
-  Download,
-  FileText,
-  Mail,
+  PenLine,
   Plus,
+  FileText,
+  CheckCircle2,
 } from "lucide-react";
 import { getDossier } from "@/data/mock";
-import { ACTE_TYPE_LABELS, type Acte } from "@/data/types";
-import { formatDate } from "@/lib/utils";
+import { ACTE_TYPE_LABELS } from "@/data/types";
+import { formatShortDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 const TABS = ["Détail", "Chiffrage", "Pièces", "Actes"] as const;
 type Tab = (typeof TABS)[number];
 
-const ACTE_ICONS: Record<string, React.ReactNode> = {
-  assignation: <FileText className="h-5 w-5 text-brand-500" />,
-  "demande-amiable": <Mail className="h-5 w-5 text-brand-500" />,
-};
+function ExportDropdown({ dossierId }: { dossierId: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-function ActeCard({ acte, dossierId }: { acte: Acte; dossierId: string }) {
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
   return (
-    <div className="flex items-center justify-between rounded-xl border border-gray-200 px-5 py-4 transition-colors hover:border-gray-300">
-      <div className="flex items-center gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50">
-          {ACTE_ICONS[acte.type] || <FileText className="h-5 w-5 text-brand-500" />}
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 rounded-lg border border-plato-bd px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50"
+      >
+        Export
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-48 rounded-lg border border-plato-bd bg-white py-1 shadow-lg">
+          <button
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-plato-dk hover:bg-gray-50"
+          >
+            <Copy className="h-4 w-4 text-plato-dk6" />
+            Copier
+          </button>
+          <Link
+            href={`/dossiers/${dossierId}/redaction`}
+            onClick={() => setOpen(false)}
+            className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-plato-dk hover:bg-gray-50"
+          >
+            <PenLine className="h-4 w-4 text-plato-dk6" />
+            Générer un acte
+          </Link>
         </div>
-        <div>
-          <p className="font-medium">{acte.title}</p>
-          <p className="text-sm text-gray-500">
-            {formatDate(acte.createdAt)} · {acte.templateName} · {acte.piecesCount} pièces
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50">
-          <Download className="h-3.5 w-3.5" />
-          .docx
-        </button>
-        <Link
-          href={`/dossiers/${dossierId}/redaction?acte=${acte.id}`}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-50"
-        >
-          Ouvrir
-        </Link>
-      </div>
+      )}
     </div>
   );
 }
 
 function PlaceholderTab({ label }: { label: string }) {
   return (
-    <div className="flex h-64 items-center justify-center text-gray-400">
+    <div className="flex h-64 items-center justify-center text-plato-dk4">
       Onglet {label} — à venir
     </div>
   );
@@ -67,36 +77,25 @@ export default function DossierPage() {
   const dossier = getDossier(params.id as string)!;
   const [activeTab, setActiveTab] = useState<Tab>("Actes");
 
+  const hasActes = dossier.actes.length > 0;
+
   return (
     <div className="px-10 py-8">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-brand-500">
-            Référence{" "}
-            <span className="text-brand-600">{dossier.reference}</span>
+          <p className="font-mono text-xs font-semibold uppercase tracking-wider text-brand-500">
+            {dossier.reference}
           </p>
-          <h1 className="mt-1 text-2xl font-semibold">
+          <h1 className="mt-1 text-2xl font-semibold font-serif">
             Dossier {dossier.clientFirstName} {dossier.clientName}
           </h1>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50">
-            <Copy className="h-4 w-4" />
-            Copier le chiffrage
-          </button>
-          <Link
-            href={`/dossiers/${dossier.id}/redaction`}
-            className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-          >
-            <PenLine className="h-4 w-4" />
-            Rédiger un acte
-          </Link>
-        </div>
+        <ExportDropdown dossierId={dossier.id} />
       </div>
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-gray-200">
+      <div className="mb-6 border-b border-plato-bd">
         <nav className="-mb-px flex gap-6">
           {TABS.map((tab) => (
             <button
@@ -105,8 +104,8 @@ export default function DossierPage() {
               className={cn(
                 "border-b-2 pb-3 text-sm font-medium transition-colors",
                 activeTab === tab
-                  ? "border-gray-900 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  ? "border-plato-dk text-plato-dk"
+                  : "border-transparent text-plato-dk6 hover:text-plato-dk"
               )}
             >
               {tab}
@@ -118,21 +117,69 @@ export default function DossierPage() {
       {/* Tab Content */}
       {activeTab === "Actes" && (
         <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Actes générés</h2>
-            <Link
-              href={`/dossiers/${dossier.id}/redaction`}
-              className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
-            >
-              <Plus className="h-4 w-4" />
-              Nouvel acte
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {dossier.actes.map((acte) => (
-              <ActeCard key={acte.id} acte={acte} dossierId={dossier.id} />
-            ))}
-          </div>
+          <h2 className="mb-4 text-lg font-semibold font-serif">Actes générés</h2>
+
+          {hasActes ? (
+            <>
+              <div className="overflow-hidden rounded-lg border border-plato-bd">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-plato-bd bg-plato-bg">
+                      <th className="px-5 py-3 text-left font-medium text-plato-dk6">Type</th>
+                      <th className="px-5 py-3 text-left font-medium text-plato-dk6">Date</th>
+                      <th className="px-5 py-3 text-left font-medium text-plato-dk6">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-plato-bd">
+                    {dossier.actes.map((acte) => (
+                      <tr key={acte.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-3 font-medium">
+                          {acte.title || ACTE_TYPE_LABELS[acte.type]}
+                        </td>
+                        <td className="px-5 py-3 text-plato-dk6">
+                          {formatShortDate(acte.createdAt)}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className="inline-flex items-center gap-1.5 text-accent-green">
+                            <CheckCircle2 className="h-4 w-4" />
+                            Généré
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6">
+                <Link
+                  href={`/dossiers/${dossier.id}/redaction`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-plato-dk px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                >
+                  <Plus className="h-4 w-4" />
+                  Générer un nouvel acte
+                </Link>
+              </div>
+            </>
+          ) : (
+            /* Empty state */
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-plato-bd py-16">
+              <FileText className="mb-3 h-12 w-12 text-plato-dk4" />
+              <p className="text-sm font-medium text-plato-dk">
+                Aucun acte généré pour ce dossier
+              </p>
+              <p className="mt-1 max-w-xs text-center text-sm text-plato-dk6">
+                Générez votre premier acte à partir de vos calculs et exemples de rédaction.
+              </p>
+              <Link
+                href={`/dossiers/${dossier.id}/redaction`}
+                className="mt-6 inline-flex items-center gap-1.5 rounded-lg bg-plato-dk px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+              >
+                <Plus className="h-4 w-4" />
+                Générer un acte
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

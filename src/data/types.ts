@@ -28,6 +28,7 @@ export interface Acte {
   createdAt: string;
   templateName: string;
   piecesCount: number;
+  status: "generated" | "draft";
 }
 
 export type ActeType =
@@ -40,7 +41,9 @@ export type ActeType =
 export interface Template {
   id: string;
   name: string;
+  fileName: string;
   acteType: ActeType;
+  uploadedAt?: string;
 }
 
 export const ACTE_TYPE_LABELS: Record<ActeType, string> = {
